@@ -1,12 +1,12 @@
 import os
 import asyncio
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from huggingface_hub import AsyncInferenceClient
 
 # --- CONFIGURATION ---
+# Ensure HF_TOKEN is set in Vercel Environment Variables
 HF_TOKEN = os.getenv("HF_TOKEN")
 client = AsyncInferenceClient(token=HF_TOKEN)
 
@@ -21,8 +21,8 @@ app = FastAPI()
 class Query(BaseModel):
     prompt: str
 
-# --- WORKER LOGIC ---
-async def call_model(prompt: str, model_key: str, tokens: int):
+# --- CORE SWARM LOGIC ---
+async def call_hf_api(prompt: str, model_key: str, tokens: int):
     try:
         return await client.text_generation(
             prompt, 
@@ -32,28 +32,28 @@ async def call_model(prompt: str, model_key: str, tokens: int):
     except Exception as e:
         return f"Error in {model_key}: {str(e)}"
 
-# --- API ROUTE ---
+# --- ROUTES ---
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_index():
+    """Serves the dashboard from the root directory."""
+    with open("index.html", "r") as f:
+        return f.read()
+
 @app.post("/api/auraflux")
-async def auraflux_engine(query: Query):
+async def auraflux_process(query: Query):
     # 1. Parallel Specialist Dispatch
-    logic_task = call_model(f"Analyze logic: {query.prompt}", "logic", 512)
-    audit_task = call_model(f"Audit syntax/typos: {query.prompt}", "audit", 256)
+    l_task = call_hf_api(f"Logic Analysis: {query.prompt}", "logic", 512)
+    a_task = call_hf_api(f"Audit & Syntax: {query.prompt}", "audit", 256)
     
-    l_res, a_res = await asyncio.gather(logic_task, audit_task)
+    l_res, a_res = await asyncio.gather(l_task, a_task)
     
-    # 2. Gemma 4 Supervisor Synthesis
-    supervisor_prompt = f"<|think|>\nLogic: {l_res}\nAudit: {a_res}\nUser: {query.prompt}\n<channel|>"
-    final_consensus = await call_model(supervisor_prompt, "supervisor", 1024)
+    # 2. Gemma 4 Sovereign Synthesis
+    supervisor_input = f"<|think|>\nLogic: {l_res}\nAudit: {a_res}\nUser: {query.prompt}\n<channel|>"
+    final_consensus = await call_hf_api(supervisor_input, "supervisor", 1024)
     
     return {
         "logic": l_res,
         "audit": a_res,
         "final": final_consensus
     }
-
-# --- FRONTEND SERVING ---
-@app.get("/")
-async def serve_home():
-    return FileResponse("/index.html")
-
-app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
