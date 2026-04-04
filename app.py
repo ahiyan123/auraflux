@@ -1,5 +1,6 @@
 import os
 import asyncio
+import json
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -9,7 +10,7 @@ from huggingface_hub import AsyncInferenceClient
 HF_TOKEN = os.getenv("HF_TOKEN")
 client = AsyncInferenceClient(token=HF_TOKEN)
 
-# High-Availability Models for 2026
+# High-Availability Models for $0 Budget
 MODELS = {
     "supervisor": "mistralai/Mixtral-8x7B-Instruct-v0.1", 
     "logic": "Qwen/Qwen2.5-72B-Instruct",
@@ -21,19 +22,31 @@ app = FastAPI()
 class Query(BaseModel):
     prompt: str
 
-# --- STABILIZED SOVEREIGN WORKER ---
+# --- STABILIZED RAW POST WORKER ---
 async def call_hf(prompt, model_key, tokens):
     try:
-        # Standardize on non-streaming Chat Completions
-        response = await client.chat.completions.create(
+        # Construct the raw JSON payload
+        payload = {
+            "model": MODELS[model_key],
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": tokens,
+            "stream": False
+        }
+        
+        # Direct POST request to the chat-completion endpoint
+        # This prevents the "StopIteration" coroutine bug
+        response = await client.post(
+            json=payload,
             model=MODELS[model_key],
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=tokens,
-            stream=False  # CRITICAL: Prevents StopIteration errors
+            task="chat-completion"
         )
-        return response.choices[0].message.content
-    except Exception:
-        # Emergency Fallback to Text Generation
+        
+        # Decode the byte response into a Python dictionary
+        result = json.loads(response.decode())
+        return result['choices'][0]['message']['content']
+        
+    except Exception as e:
+        # Emergency backup for models that prefer text-generation
         try:
             res = await client.text_generation(
                 prompt,
@@ -41,8 +54,8 @@ async def call_hf(prompt, model_key, tokens):
                 max_new_tokens=tokens
             )
             return res if isinstance(res, str) else str(res)
-        except Exception as e:
-            return f"Swarm Error: {str(e)}"
+        except Exception as e2:
+            return f"Swarm Error: {str(e2)}"
 
 # --- ROUTES ---
 @app.get("/", response_class=HTMLResponse)
@@ -52,7 +65,7 @@ async def serve_index():
 
 @app.post("/api/auraflux")
 async def auraflux_engine(query: Query):
-    # Parallel specialist dispatch
+    # Parallel Specialist Dispatch
     l_task = call_hf(f"Logic Analysis: {query.prompt}", "logic", 512)
     a_task = call_hf(f"Audit Analysis: {query.prompt}", "audit", 512)
     l_res, a_res = await asyncio.gather(l_task, a_task)
