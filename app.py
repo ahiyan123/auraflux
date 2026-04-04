@@ -9,11 +9,11 @@ from huggingface_hub import AsyncInferenceClient
 HF_TOKEN = os.getenv("HF_TOKEN")
 client = AsyncInferenceClient(token=HF_TOKEN)
 
-# Using stable, high-availability models for $0 budget
+# Universal Stable Models (Optimized for $0 Budget)
 MODELS = {
-    "supervisor": "google/gemma-2-27b-it",
+    "supervisor": "mistralai/Mixtral-8x7B-Instruct-v0.1", 
     "logic": "Qwen/Qwen2.5-72B-Instruct",
-    "audit": "mistralai/Mixtral-8x7B-Instruct-v0.1"
+    "audit": "meta-llama/Llama-3.2-3B-Instruct" 
 }
 
 app = FastAPI()
@@ -21,18 +21,27 @@ app = FastAPI()
 class Query(BaseModel):
     prompt: str
 
-# --- UPDATED AI WORKER (Chat Completion) ---
+# --- SOVEREIGN DUAL-PROTOCOL WORKER ---
 async def call_hf(prompt, model_key, tokens):
+    # Attempt 1: Chat Completion (Modern Standard)
     try:
-        # Switching to chat_completion to support Groq/Novita providers
         response = await client.chat_completion(
             model=MODELS[model_key],
             messages=[{"role": "user", "content": prompt}],
             max_tokens=tokens
         )
         return response.choices[0].message.content
-    except Exception as e:
-        return f"System Error: {str(e)}"
+    except Exception:
+        # Attempt 2: Text Generation (Fallback for strict providers)
+        try:
+            res = await client.text_generation(
+                prompt,
+                model=MODELS[model_key],
+                max_new_tokens=tokens
+            )
+            return res if isinstance(res, str) else str(res)
+        except Exception as e:
+            return f"Swarm Error: {str(e)}"
 
 # --- ROUTES ---
 @app.get("/", response_class=HTMLResponse)
@@ -42,13 +51,13 @@ async def serve_index():
 
 @app.post("/api/auraflux")
 async def auraflux_engine(query: Query):
-    # Parallel specialist dispatch
-    l_task = call_hf(f"Analyze the logic of this: {query.prompt}", "logic", 512)
-    a_task = call_hf(f"Audit for errors/improvements: {query.prompt}", "audit", 512)
+    # Parallel dispatch to Specialists
+    l_task = call_hf(f"Analyze the logic: {query.prompt}", "logic", 512)
+    a_task = call_hf(f"Audit for errors: {query.prompt}", "audit", 512)
     l_res, a_res = await asyncio.gather(l_task, a_task)
     
-    # Gemma 2 Synthesis
-    sup_prompt = f"Logic: {l_res}\nAudit: {a_res}\nUser Query: {query.prompt}\nProvide a final sovereign consensus."
+    # Synthesis (Supervisor Brain)
+    sup_prompt = f"Logic: {l_res}\nAudit: {a_res}\nUser: {query.prompt}\nFinal Sovereign Consensus:"
     final = await call_hf(sup_prompt, "supervisor", 1024)
     
     return {"logic": l_res, "audit": a_res, "final": final}
