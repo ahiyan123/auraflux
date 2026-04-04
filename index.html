@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AURAFLUX</title>
+    <style>
+        :root { --bg: #fff; --gray: #f8f8f8; --border: #eee; --text: #1a1a1a; }
+        body { font-family: -apple-system, system-ui; margin: 0; background: var(--bg); color: var(--text); }
+        nav { padding: 20px 40px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; letter-spacing: 1px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; height: 75vh; }
+        .pane { padding: 30px; border-right: 1px solid var(--border); overflow-y: auto; }
+        label { font-size: 9px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 20px; }
+        .consensus { font-size: 16px; line-height: 1.7; border-left: 2px solid var(--text); padding-left: 20px; }
+        footer { position: fixed; bottom: 0; width: 100%; padding: 25px 40px; border-top: 1px solid var(--border); background: #fff; display: flex; box-sizing: border-box; }
+        input { flex: 1; border: none; outline: none; font-size: 16px; }
+        button { background: var(--text); color: #fff; border: none; padding: 10px 25px; font-size: 12px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <nav>AURAFLUX // SOVEREIGN ENGINE</nav>
+    <div class="grid">
+        <div class="pane"><label>Logic Specialist (Qwen)</label><div id="l">...</div></div>
+        <div class="pane"><label>Audit Specialist (GPT-OSS)</label><div id="a">...</div></div>
+        <div class="pane" style="border:none;"><label>Auraflux Consensus</label><div id="f" class="consensus">Ready for parameters...</div></div>
+    </div>
+    <footer>
+        <input type="text" id="i" placeholder="Enter command..." onkeypress="if(event.key==='Enter') send()">
+        <button onclick="send()">EXECUTE</button>
+    </footer>
+    <script>
+        const ws = new WebSocket('ws://localhost:8000/ws/auraflux');
+        ws.onmessage = (e) => {
+            const d = JSON.parse(e.data);
+            document.getElementById('l').innerText = d.logic;
+            document.getElementById('a').innerText = d.audit;
+            document.getElementById('f').innerText = d.final;
+        };
+        function send() {
+            const input = document.getElementById('i');
+            ws.send(input.value);
+            input.value = '';
+        }
+    </script>
+</body>
+</html>
