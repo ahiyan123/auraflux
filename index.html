@@ -2,44 +2,132 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AURAFLUX</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURAFLUX | Sovereign Engine</title>
     <style>
-        :root { --bg: #fff; --gray: #f8f8f8; --border: #eee; --text: #1a1a1a; }
-        body { font-family: -apple-system, system-ui; margin: 0; background: var(--bg); color: var(--text); }
-        nav { padding: 20px 40px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; letter-spacing: 1px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; height: 75vh; }
-        .pane { padding: 30px; border-right: 1px solid var(--border); overflow-y: auto; }
-        label { font-size: 9px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 20px; }
-        .consensus { font-size: 16px; line-height: 1.7; border-left: 2px solid var(--text); padding-left: 20px; }
-        footer { position: fixed; bottom: 0; width: 100%; padding: 25px 40px; border-top: 1px solid var(--border); background: #fff; display: flex; box-sizing: border-box; }
-        input { flex: 1; border: none; outline: none; font-size: 16px; }
-        button { background: var(--text); color: #fff; border: none; padding: 10px 25px; font-size: 12px; cursor: pointer; }
+        /* --- AURAFLUX MINIMALIST FRAMEWORK --- */
+        :root {
+            --bg: #ffffff;
+            --border: #eeeeee;
+            --text-main: #1a1a1a;
+            --text-muted: #888888;
+            --accent: #000000;
+            --status-green: #00ca4e;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 15px 40px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .status-indicator { color: var(--status-green); font-size: 10px; }
+
+        /* --- SWARM GRID --- */
+        .container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.5fr;
+            background-color: var(--border);
+            gap: 1px; 
+        }
+
+        .pane {
+            background-color: var(--bg);
+            padding: 35px;
+            overflow-y: auto;
+        }
+
+        label {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .output {
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .consensus-box {
+            font-size: 16px;
+            font-weight: 500;
+            line-height: 1.8;
+            border-left: 3px solid var(--accent);
+            padding-left: 25px;
+        }
+
+        /* --- INPUT CONSOLE --- */
+        footer {
+            padding: 25px 40px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            background: var(--bg);
+            gap: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            border: none;
+            font-size: 16px;
+            outline: none;
+            background: transparent;
+        }
+
+        button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 10px 30px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:active { opacity: 0.7; }
     </style>
 </head>
 <body>
-    <nav>AURAFLUX // SOVEREIGN ENGINE</nav>
-    <div class="grid">
-        <div class="pane"><label>Logic Specialist (Qwen)</label><div id="l">...</div></div>
-        <div class="pane"><label>Audit Specialist (GPT-OSS)</label><div id="a">...</div></div>
-        <div class="pane" style="border:none;"><label>Auraflux Consensus</label><div id="f" class="consensus">Ready for parameters...</div></div>
-    </div>
-    <footer>
-        <input type="text" id="i" placeholder="Enter command..." onkeypress="if(event.key==='Enter') send()">
-        <button onclick="send()">EXECUTE</button>
-    </footer>
-    <script>
-        const ws = new WebSocket('ws://localhost:8000/ws/auraflux');
-        ws.onmessage = (e) => {
-            const d = JSON.parse(e.data);
-            document.getElementById('l').innerText = d.logic;
-            document.getElementById('a').innerText = d.audit;
-            document.getElementById('f').innerText = d.final;
-        };
-        function send() {
-            const input = document.getElementById('i');
-            ws.send(input.value);
-            input.value = '';
-        }
-    </script>
-</body>
-</html>
+
+    <header>
+        <span>AURAFLUX // SOVEREIGN ENGINE</span>
+        <span class="status-indicator" id="status">● SYSTEM ONLINE</span>
+    </header>
+
+    <div class="container">
+        <div class="pane">
+            <label>Logic Specialist (Qwen 3.5)</label>
+            <div id="l" class="output">_awaiting_parameters</div>
+        </div>
+
+        <div class="pane">
+            <label>Audit Specialist (GPT-OSS)</label>
+            <div id="a" class="output">_awaiting_parameters</div>
+        </div>
+
+        <div class="pane">
+            <label
