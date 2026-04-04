@@ -1,133 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AURAFLUX | Sovereign Engine</title>
+    <meta charset="UTF-8"><title>AURAFLUX</title>
     <style>
-        /* --- AURAFLUX MINIMALIST FRAMEWORK --- */
-        :root {
-            --bg: #ffffff;
-            --border: #eeeeee;
-            --text-main: #1a1a1a;
-            --text-muted: #888888;
-            --accent: #000000;
-            --status-green: #00ca4e;
+        :root { --bg: #fff; --border: #eee; --text: #1a1a1a; --muted: #888; }
+        body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        nav { padding: 20px 40px; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 800; letter-spacing: 2px; }
+        
+        /* The container height fix */
+        .container { 
+            flex: 1; 
+            display: grid; 
+            grid-template-columns: 1fr 1fr 1.5fr; 
+            background: var(--border); 
+            gap: 1px;
+            height: calc(100vh - 140px); 
         }
-
-        * { box-sizing: border-box; }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
+        
+        .pane { background: #fff; padding: 30px; overflow-y: auto; }
+        label { font-size: 9px; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 15px; }
+        .output { font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+        .consensus { font-size: 16px; border-left: 3px solid #000; padding-left: 20px; font-weight: 500; }
+        
+        footer { 
+            height: 80px; 
+            padding: 0 40px; 
+            border-top: 1px solid var(--border); 
+            display: flex; 
+            align-items: center; 
+            background: #fff; 
         }
-
-        header {
-            padding: 15px 40px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-        }
-
-        .status-indicator { color: var(--status-green); font-size: 10px; }
-
-        /* --- SWARM GRID --- */
-        .container {
-            flex: 1;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1.5fr;
-            background-color: var(--border);
-            gap: 1px; 
-        }
-
-        .pane {
-            background-color: var(--bg);
-            padding: 35px;
-            overflow-y: auto;
-        }
-
-        label {
-            font-size: 10px;
-            font-weight: 800;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            display: block;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .output {
-            font-size: 14px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
-
-        .consensus-box {
-            font-size: 16px;
-            font-weight: 500;
-            line-height: 1.8;
-            border-left: 3px solid var(--accent);
-            padding-left: 25px;
-        }
-
-        /* --- INPUT CONSOLE --- */
-        footer {
-            padding: 25px 40px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            background: var(--bg);
-            gap: 20px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            border: none;
-            font-size: 16px;
-            outline: none;
-            background: transparent;
-        }
-
-        button {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 10px 30px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        button:active { opacity: 0.7; }
+        input { flex: 1; border: none; outline: none; font-size: 16px; background: transparent; }
+        button { background: #000; color: #fff; border: none; padding: 10px 25px; cursor: pointer; font-weight: 600; }
     </style>
 </head>
 <body>
-
-    <header>
-        <span>AURAFLUX // SOVEREIGN ENGINE</span>
-        <span class="status-indicator" id="status">● SYSTEM ONLINE</span>
-    </header>
-
+    <nav>AURAFLUX // SYSTEM ONLINE</nav>
     <div class="container">
-        <div class="pane">
-            <label>Logic Specialist (Qwen 3.5)</label>
-            <div id="l" class="output">_awaiting_parameters</div>
-        </div>
-
-        <div class="pane">
-            <label>Audit Specialist (GPT-OSS)</label>
-            <div id="a" class="output">_awaiting_parameters</div>
-        </div>
-
-        <div class="pane">
-            <label
+        <div class="pane"><label>Logic (Qwen)</label><div id="l" class="output">...</div></div>
+        <div class="pane"><label>Audit (GPT-OSS)</label><div id="a" class="output">...</div></div>
+        <div class="pane"><label>Gemma 4 Consensus</label><div id="f" class="consensus">Ready...</div></div>
+    </div>
+    <footer>
+        <input type="text" id="i" placeholder="Enter parameter..." onkeypress="if(event.key==='Enter') run()">
+        <button onclick="run()">EXECUTE</button>
+    </footer>
+    <script>
+        async function run() {
+            const i = document.getElementById('i');
+            const val = i.value; if(!val) return;
+            i.value = '';
+            document.getElementById('f').innerText = "Fluxing...";
+            const res = await fetch('/api/auraflux', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({prompt: val})
+            });
+            const d = await res.json();
+            document.getElementById('l').innerText = d.logic;
+            document.getElementById('a').innerText = d.audit;
+            document.getElementById('f').innerText = d.final;
+        }
+    </script>
+</body>
+</html>
