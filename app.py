@@ -1,20 +1,20 @@
 import os
 import asyncio
-import json
+import httpx
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from huggingface_hub import AsyncInferenceClient
 
 # --- CONFIGURATION ---
 HF_TOKEN = os.getenv("HF_TOKEN")
-client = AsyncInferenceClient(token=HF_TOKEN)
+API_URL = "https://api-inference.huggingface.co/models/"
+HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"}
 
-# High-Availability Models for $0 Budget
+# THE UPGRADED 2026 SWARM
 MODELS = {
-    "supervisor": "mistralai/Mixtral-8x7B-Instruct-v0.1", 
-    "logic": "Qwen/Qwen2.5-72B-Instruct",
-    "audit": "meta-llama/Llama-3.2-3B-Instruct" 
+    "supervisor": "google/gemma-4-31b-it",             # Gemma 4 (The Leader)
+    "logic": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B", # DeepSeek R1 (The Thinker)
+    "audit": "meta-llama/Llama-3.2-3B-Instruct"         # GPT-OSS (The Auditor)
 }
 
 app = FastAPI()
@@ -22,40 +22,30 @@ app = FastAPI()
 class Query(BaseModel):
     prompt: str
 
-# --- STABILIZED RAW POST WORKER ---
+# --- DIRECT-WIRE WORKER ---
 async def call_hf(prompt, model_key, tokens):
-    try:
-        # Construct the raw JSON payload
-        payload = {
-            "model": MODELS[model_key],
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": tokens,
-            "stream": False
-        }
-        
-        # Direct POST request to the chat-completion endpoint
-        # This prevents the "StopIteration" coroutine bug
-        response = await client.post(
-            json=payload,
-            model=MODELS[model_key],
-            task="chat-completion"
-        )
-        
-        # Decode the byte response into a Python dictionary
-        result = json.loads(response.decode())
-        return result['choices'][0]['message']['content']
-        
-    except Exception as e:
-        # Emergency backup for models that prefer text-generation
+    model_id = MODELS[model_key]
+    # DeepSeek R1 works best with a thinking prompt
+    formatted_prompt = f"<|thought|>\n{prompt}" if "logic" in model_key else prompt
+    
+    payload = {
+        "inputs": formatted_prompt,
+        "parameters": {"max_new_tokens": tokens, "wait_for_model": True}
+    }
+    
+    async with httpx.AsyncClient(timeout=60.0) as client:
         try:
-            res = await client.text_generation(
-                prompt,
-                model=MODELS[model_key],
-                max_new_tokens=tokens
-            )
-            return res if isinstance(res, str) else str(res)
-        except Exception as e2:
-            return f"Swarm Error: {str(e2)}"
+            response = await client.post(f"{API_URL}{model_id}", json=payload, headers=HEADERS)
+            result = response.json()
+            
+            if isinstance(result, list) and len(result) > 0:
+                return result[0].get('generated_text', 'No response')
+            elif isinstance(result, dict) and 'generated_text' in result:
+                return result['generated_text']
+            else:
+                return f"System Note: {str(result)}"
+        except Exception as e:
+            return f"Swarm Error: {str(e)}"
 
 # --- ROUTES ---
 @app.get("/", response_class=HTMLResponse)
@@ -65,13 +55,13 @@ async def serve_index():
 
 @app.post("/api/auraflux")
 async def auraflux_engine(query: Query):
-    # Parallel Specialist Dispatch
-    l_task = call_hf(f"Logic Analysis: {query.prompt}", "logic", 512)
-    a_task = call_hf(f"Audit Analysis: {query.prompt}", "audit", 512)
+    # Parallel dispatch to Specialist Brains
+    l_task = call_hf(f"Step-by-step logic for: {query.prompt}", "logic", 1024)
+    a_task = call_hf(f"Audit this for errors: {query.prompt}", "audit", 512)
     l_res, a_res = await asyncio.gather(l_task, a_task)
     
-    # Synthesis (Supervisor Brain)
-    sup_prompt = f"Logic: {l_res}\nAudit: {a_res}\nUser Query: {query.prompt}\nFinal Consensus:"
+    # Gemma 4 Final Synthesis
+    sup_prompt = f"Logic Thought Process: {l_res}\nAuditor Report: {a_res}\nUser Goal: {query.prompt}\nFinal Sovereign Consensus:"
     final = await call_hf(sup_prompt, "supervisor", 1024)
     
     return {"logic": l_res, "audit": a_res, "final": final}
