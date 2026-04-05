@@ -36,7 +36,7 @@ async def call_hf(prompt, model_key, tokens):
         "parameters": {"max_new_tokens": tokens}
     }
     
-    async with httpx.AsyncClient(timeout=90.0) as client: # Increased timeout for heavy models
+    async with httpx.AsyncClient(timeout=180.0) as client: # Increased timeout for heavy models
         for attempt in range(3): # 3 Retries for stability
             try:
                 response = await client.post(f"{API_URL}{model_id}", json=payload, headers=HEADERS)
