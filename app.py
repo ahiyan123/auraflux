@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 # --- CONFIGURATION ---
 HF_TOKEN = os.getenv("HF_TOKEN")
-API_URL = "https://api-inference.huggingface.co/models/"
+API_URL = "https://router.huggingface.co/models/"
 HEADERS = {
     "Authorization": f"Bearer {HF_TOKEN}",
     "x-wait-for-model": "true", # Crucial for 2026 high-traffic models
