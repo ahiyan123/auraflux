@@ -14,11 +14,10 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# THE 2026 SOVEREIGN SWARM
 MODELS = {
-    "supervisor": "google/gemma-4-31b-it",             # Gemma 4
-    "logic": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B", # DeepSeek R1
-    "audit": "meta-llama/Llama-3.2-3B-Instruct"         # GPT-OSS
+    "supervisor": "google/gemma-4-9b-it",             # Gemma 4 Edge (Fast Consensus)
+    "logic": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B", # R1 Logic (Fast Thinking)
+    "audit": "meta-llama/Llama-3.2-3B-Instruct"         # LLAMA (Instant Audit)
 }
 
 app = FastAPI()
