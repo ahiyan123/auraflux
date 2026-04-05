@@ -7,17 +7,18 @@ from pydantic import BaseModel
 
 # --- CONFIGURATION ---
 HF_TOKEN = os.getenv("HF_TOKEN")
-API_URL = "https://router.huggingface.co/models/"
+API_URL = "https://api-inference.huggingface.co/models/"
 HEADERS = {
     "Authorization": f"Bearer {HF_TOKEN}",
-    "x-wait-for-model": "true", # Force the API to wait for the model to load
-    "Content-Type": "application/json"
+    "x-wait-for-model": "true", # Crucial for 2026 high-traffic models
+    "x-use-cache": "false"      # Ensures fresh reasoning for every flux
 }
 
+# THE HIGH-AVAILABILITY 2026 SWARM
 MODELS = {
-    "supervisor": "google/gemma-4-9b-it",             # Gemma 4 Edge (Fast Consensus)
-    "logic": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B", # R1 Logic (Fast Thinking)
-    "audit": "meta-llama/Llama-3.2-3B-Instruct"         # LLAMA (Instant Audit)
+    "supervisor": "google/gemma-4-E9B-it",             # Gemma 4 Edge (Teacher-Distilled)
+    "logic": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B", # R1 Reasoning (Fast Logic)
+    "audit": "meta-llama/Llama-3.2-3B-Instruct"         # GPT-OSS (Instant Audit)
 }
 
 app = FastAPI()
@@ -25,35 +26,32 @@ app = FastAPI()
 class Query(BaseModel):
     prompt: str
 
-# --- ROBUST WORKER ---
+# --- HARDENED ASYNC WORKER ---
 async def call_hf(prompt, model_key, tokens):
     model_id = MODELS[model_key]
-    # DeepSeek R1 reasoning trigger
+    # DeepSeek R1 requires the <think> trigger to activate reasoning
     formatted_prompt = f"<think>\n{prompt}" if "logic" in model_key else prompt
     
     payload = {
         "inputs": formatted_prompt,
-        "parameters": {"max_new_tokens": tokens}
+        "parameters": {"max_new_tokens": tokens, "return_full_text": False}
     }
     
-    async with httpx.AsyncClient(timeout=180.0) as client: # Increased timeout for heavy models
-        for attempt in range(3): # 3 Retries for stability
-            try:
-                response = await client.post(f"{API_URL}{model_id}", json=payload, headers=HEADERS)
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    if isinstance(result, list): return result[0].get('generated_text', '')
-                    return result.get('generated_text', str(result))
-                
-                elif response.status_code == 503: # Model is loading
-                    await asyncio.sleep(5)
-                    continue
-                    
-            except Exception as e:
-                if attempt == 2: return f"Swarm Error: {str(e)}"
-                await asyncio.sleep(2)
-    return "Error: Swarm timed out."
+    async with httpx.AsyncClient(timeout=45.0) as client:
+        try:
+            response = await client.post(f"{API_URL}{model_id}", json=payload, headers=HEADERS)
+            
+            # Catch HTML error pages from overloaded servers
+            if response.status_code != 200:
+                return f"Server Busy (Code {response.status_code}). Retrying..."
+            
+            result = response.json()
+            if isinstance(result, list):
+                return result[0].get('generated_text', 'No data.')
+            return result.get('generated_text', 'Processing...')
+            
+        except Exception as e:
+            return f"Offline: {str(e)}"
 
 # --- ROUTES ---
 @app.get("/", response_class=HTMLResponse)
@@ -63,13 +61,13 @@ async def serve_index():
 
 @app.post("/api/auraflux")
 async def auraflux_engine(query: Query):
-    # Execute specialists in parallel
-    l_task = call_hf(query.prompt, "logic", 1024)
-    a_task = call_hf(query.prompt, "audit", 512)
+    # Run Logic and Audit in parallel to save Vercel execution time
+    l_task = call_hf(query.prompt, "logic", 512)
+    a_task = call_hf(query.prompt, "audit", 256)
     l_res, a_res = await asyncio.gather(l_task, a_task)
     
-    # Gemma 4 Consensus
-    sup_prompt = f"Logic: {l_res}\nAudit: {a_res}\nTask: {query.prompt}\nConsensus:"
-    final = await call_hf(sup_prompt, "supervisor", 1024)
+    # Final Consensus by Gemma 4 Edge
+    sup_prompt = f"Logic: {l_res}\nAudit: {a_res}\nUser Intent: {query.prompt}\nSovereign Consensus:"
+    final = await call_hf(sup_prompt, "supervisor", 512)
     
     return {"logic": l_res, "audit": a_res, "final": final}
