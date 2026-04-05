@@ -1,3 +1,4 @@
 fastapi
 huggingface_hub
 pydantic
+httpx
